@@ -94,6 +94,7 @@ import me.rerere.rikkahub.utils.JsonInstant
 import me.rerere.rikkahub.utils.base64Encode
 import me.rerere.rikkahub.utils.openUrl
 import me.rerere.rikkahub.utils.urlDecode
+import me.rerere.tts.provider.providers.extractDirectorModeLine
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -356,6 +357,8 @@ private fun MessagePartsBlock(
             is MessagePartBlock.ContentBlock -> key(block.index) {
                 when (val part = block.part) {
                     is UIMessagePart.Text -> {
+                        // 导演模式文本在 UI 上只显示台词部分
+                        val displayText = extractDirectorModeLine(part.text) ?: part.text
                         val textContent = @Composable {
                             if (role == MessageRole.USER) {
                                 Surface(
@@ -366,7 +369,7 @@ private fun MessagePartsBlock(
                                 ) {
                                     Column(modifier = Modifier.padding(8.dp)) {
                                         MarkdownBlock(
-                                            content = part.text.replaceRegexes(
+                                            content = displayText.replaceRegexes(
                                                 assistant = assistant,
                                                 scope = AssistantAffectScope.USER,
                                                 visual = true,
@@ -384,7 +387,7 @@ private fun MessagePartsBlock(
                                     ) {
                                         Column(modifier = Modifier.padding(8.dp)) {
                                             MarkdownBlock(
-                                                content = part.text.replaceRegexes(
+                                                content = displayText.replaceRegexes(
                                                     assistant = assistant,
                                                     scope = AssistantAffectScope.ASSISTANT,
                                                     visual = true,
@@ -395,7 +398,7 @@ private fun MessagePartsBlock(
                                     }
                                 } else {
                                     MarkdownBlock(
-                                        content = part.text.replaceRegexes(
+                                        content = displayText.replaceRegexes(
                                             assistant = assistant,
                                             scope = AssistantAffectScope.ASSISTANT,
                                             visual = true,
