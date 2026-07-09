@@ -162,6 +162,14 @@ internal fun parseDirectorMode(text: String): DirectorModePayload? {
     return DirectorModePayload(userContent = userContent, assistantContent = line)
 }
 
+/**
+ * 从导演模式文本中提取台词部分，用于 UI 显示过滤。
+ * 如果不是导演模式格式，返回 null。
+ */
+fun extractDirectorModeLine(text: String): String? {
+    return parseDirectorMode(text)?.assistantContent
+}
+
 class MiMoTTSProvider : TTSProvider<TTSProviderSetting.MiMo> {
     private val httpClient = OkHttpClient.Builder()
         .readTimeout(120, TimeUnit.SECONDS)
