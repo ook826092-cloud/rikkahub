@@ -126,16 +126,59 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --stacktrace
 
-      # 把 APK 直接发布为 Prerelease，用户点链接即可下载单个 apk，无需登录、无需解压
-      - name: Publish nightly prerelease
+      - name: Prepare release info
+        id: relinfo
+        run: |
+          # 读取 app 版本号
+          VERSION_NAME=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          # 生成时间戳（北京时间）
+          BUILD_TIME=$(date +'%Y%m%d-%H%M')
+          # 组合 tag 和 release 名称
+          TAG_NAME="v${VERSION_NAME}-${BUILD_TIME}"
+          RELEASE_NAME="RikkaHub Build ${VERSION_NAME} (${BUILD_TIME})"
+
+          # 生成 release notes
+          COMMIT_SHA=${{ github.sha }}
+          SHORT_SHA=$(echo "$COMMIT_SHA" | cut -c1-7)
+          BRANCH=${{ github.ref_name }}
+
+          # 获取最近 10 条提交作为变更日志
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" -n 10)
+
+          BODY=$(cat <<EOF
+          RikkaHub 自动构建版本
+
+          - 版本号：${VERSION_NAME}
+          - 构建时间：${BUILD_TIME}
+          - 分支：${BRANCH}
+          - Commit：${COMMIT_SHA}
+          - 包名：me.rerere.rikkahub.dev（与官方版共存）
+
+          ## 最近变更
+          ${CHANGELOG}
+
+          > ⚠️ 这是开发测试版本，可能不稳定，仅供测试使用。
+          EOF
+          )
+
+          # 多行输出转义
+          {
+            echo "tag_name=${TAG_NAME}"
+            echo "release_name=${RELEASE_NAME}"
+            echo "version_name=${VERSION_NAME}"
+            echo "build_time=${BUILD_TIME}"
+          } >> "$GITHUB_OUTPUT"
+
+          # body 写入文件，避免多行字符串在 with 中出问题
+          echo "$BODY" > /tmp/release_body.md
+
+      # 每次编译创建新的 Release，不覆盖旧版本
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: nightly            # 固定 tag，每晚覆盖同一个「最新每日构建」
-          name: Nightly Build
+          tag_name: ${{ steps.relinfo.outputs.tag_name }}
+          name: ${{ steps.relinfo.outputs.release_name }}
           prerelease: true
-          body: |
-            自动每日构建（commit `${{ github.sha }}`）
-
-            > ⚠️ 开发版本，可能不稳定，仅供测试。
+          body_path: /tmp/release_body.md
           files: app/build/outputs/apk/release/*.apk
