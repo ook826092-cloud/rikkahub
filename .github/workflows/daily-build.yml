@@ -75,6 +75,9 @@ jobs:
 
       - name: Prepare build files
         run: |
+          # 修改 release 包名后缀，避免与官方版冲突
+          sed -i 's/applicationIdSuffix = "\.debug"/applicationIdSuffix = "\.dev"/' app/build.gradle.kts
+
           # 在 CI 环境中生成临时自签名 keystore（仅用于测试构建）
           keytool -genkey -v \
             -keystore app/app.key \
@@ -93,7 +96,37 @@ jobs:
           EOF
 
           # 写入最小化的 Google Services 配置（避免 Firebase 插件报错）
-          echo '{}' > app/google-services.json
+          cat > app/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "123456789",
+              "project_id": "rikkahub-build",
+              "storage_bucket": "rikkahub-build.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789:android:0000000000000000000000",
+                  "android_client_info": {
+                    "package_name": "me.rerere.rikkahub.dev"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "dummy-api-key-for-build-only"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "status": 1
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
 
       - name: Gradle Build
         run: |
